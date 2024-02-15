@@ -1,4 +1,5 @@
-use base64;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use ring::digest::{self, digest, SHA256_OUTPUT_LEN};
 use ring::hmac::{self, Context, Key, HMAC_SHA256};
 use ring::pbkdf2::{self, PBKDF2_HMAC_SHA256 as SHA256};
@@ -60,7 +61,7 @@ pub fn find_proofs(
     }
 
     let client_final_without_proof =
-        format!("c={},r={}", base64::encode(gs2header.as_bytes()), nonce);
+        format!("c={},r={}", STANDARD.encode(gs2header.as_bytes()), nonce);
     let auth_message = [
         client_first_bare.as_bytes(),
         b",",

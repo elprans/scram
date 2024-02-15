@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 use std::num::NonZeroU32;
 
-use base64;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use rand::distributions::{Distribution, Uniform};
 use rand::{rngs::OsRng, Rng};
 use ring::digest::SHA256_OUTPUT_LEN;
@@ -39,7 +40,7 @@ fn parse_server_first(data: &str) -> Result<(&str, Vec<u8>, NonZeroU32), Error> 
         }
     };
     let salt = match parts.next() {
-        Some(part) if &part.as_bytes()[..2] == b"s=" => base64::decode(part[2..].as_bytes())
+        Some(part) if &part.as_bytes()[..2] == b"s=" => STANDARD.decode(part[2..].as_bytes())
             .map_err(|_| Error::Protocol(Kind::InvalidField(Field::Salt)))?,
         _ => {
             return Err(Error::Protocol(Kind::ExpectedField(Field::Salt)));
@@ -61,7 +62,7 @@ fn parse_server_final(data: &str) -> Result<Vec<u8>, Error> {
         return Err(Error::Protocol(Kind::ExpectedField(Field::VerifyOrError)));
     }
     match &data[..2] {
-        "v=" => base64::decode(&data.as_bytes()[2..])
+        "v=" => STANDARD.decode(&data.as_bytes()[2..])
             .map_err(|_| Error::Protocol(Kind::InvalidField(Field::VerifyOrError))),
         "e=" => Err(Error::Authentication(data[2..].to_string())),
         _ => Err(Error::Protocol(Kind::ExpectedField(Field::VerifyOrError))),
@@ -188,9 +189,9 @@ impl<'a> ServerFirst<'a> {
         );
         let client_final = format!(
             "c={},r={},p={}",
-            base64::encode(self.gs2header.as_bytes()),
+            STANDARD.encode(self.gs2header.as_bytes()),
             nonce,
-            base64::encode(&client_proof)
+            STANDARD.encode(&client_proof)
         );
         Ok(ClientFinal {
             server_signature,

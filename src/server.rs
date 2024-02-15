@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
-use base64;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use rand::distributions::{Distribution, Uniform};
 use rand::{rngs::OsRng, Rng};
 use ring::digest::SHA256_OUTPUT_LEN;
@@ -195,7 +196,7 @@ impl<'a, P: AuthenticationProvider> ServerFirst<'a, P> {
         let server_first: Cow<'static, str> = format!(
             "r={},s={},i={}",
             nonce,
-            base64::encode(self.password_info.salt.as_slice()),
+            STANDARD.encode(self.password_info.salt.as_slice()),
             self.password_info.iterations
         )
         .into();
@@ -275,7 +276,7 @@ impl<'a, P: AuthenticationProvider> ClientFinal<'a, P> {
 
     /// Checks that the gs2header received from the client is the same as the one we've stored
     fn verify_header(&self, gs2header: &str) -> bool {
-        let server_gs2header = base64::encode(self.gs2header.as_bytes());
+        let server_gs2header = STANDARD.encode(self.gs2header.as_bytes());
         server_gs2header == gs2header
     }
 
@@ -293,7 +294,7 @@ impl<'a, P: AuthenticationProvider> ClientFinal<'a, P> {
             self.hashed_password.as_slice(),
             &self.nonce,
         );
-        let proof = if let Ok(proof) = base64::decode(proof.as_bytes()) {
+        let proof = if let Ok(proof) = STANDARD.decode(proof.as_bytes()) {
             proof
         } else {
             return Err(Error::Protocol(Kind::InvalidField(Field::Proof)));
@@ -302,7 +303,7 @@ impl<'a, P: AuthenticationProvider> ClientFinal<'a, P> {
             return Ok(None);
         }
 
-        let server_signature_string = format!("v={}", base64::encode(server_signature.as_ref()));
+        let server_signature_string = format!("v={}", STANDARD.encode(server_signature.as_ref()));
         Ok(Some(server_signature_string))
     }
 }
